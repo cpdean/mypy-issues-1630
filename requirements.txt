@@ -1,0 +1,2 @@
+mypy-lang==0.4.1
+typed-ast==0.5.2
