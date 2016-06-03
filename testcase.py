@@ -1,17 +1,29 @@
-from typing import Any, Callable, Generator, Iterable, Tuple, Sized, Union, Optional # NOQA
+from typing import Any, Callable, Generator, Iterable, Tuple, Sized, Union, Optional  # NOQA
 import time
 
 from contextlib import contextmanager
 
-# note how type annotations omit 'self'
+
 class TimeTrackingCursor(object):
-    def cursor_execute(self, sql):
+    def execute(self, sql):
         # type: (str) -> str
+        # note how type annotations omit 'self'
         return sql + "1"
 
-    def cursor_execute_many(self, sqls):
+    def executemany(self, sqls):
         # type: (Iterable[str]) -> Iterable[str]
         return [s + "1" for s in sqls]
+
+    def mogrify(self, sql, params=()):
+        # type: (str, Iterable[Any]) -> str
+        return "mogrified"
+
+
+class Foo(object):
+    def foo_method(self, s):
+        # type: (str) -> str
+        return s
+
 
 @contextmanager
 def queries_captured():
@@ -23,9 +35,9 @@ def queries_captured():
 
     queries = []
 
-    # out of habit, omitting 'self'
     def wrapper_execute(self, action, sql, params=()):
         # type: (Callable, str, Iterable[Any]) -> None
+        # out of habit, omitting 'self'
         start = time.time()
         try:
             return action(sql, params)
@@ -40,15 +52,15 @@ def queries_captured():
     old_execute = TimeTrackingCursor.execute
     old_executemany = TimeTrackingCursor.executemany
 
-    def cursor_execute(self, sql, params=()): # type: ignore # maybe related to https://github.com/JukkaL/mypy/issues/1167
-        return wrapper_execute(self, super(TimeTrackingCursor, self).execute, sql, params) # type: ignore # https://github.com/JukkaL/mypy/issues/1167 # NOQA
-    TimeTrackingCursor.execute = cursor_execute # type: ignore # maybe related to https://github.com/JukkaL/mypy/issues/1167
+    def cursor_execute(self, sql, params=()):  # type: ignore
+        return wrapper_execute(self, super(TimeTrackingCursor, self).execute, sql, params)  # type: ignore
+    TimeTrackingCursor.execute = cursor_execute  # type: ignore
 
-    def cursor_executemany(self, sql, params=()): # type: ignore # maybe related to https://github.com/JukkaL/mypy/issues/1167
-        return wrapper_execute(self, super(TimeTrackingCursor, self).executemany, sql, params) # type: ignore # https://github.com/JukkaL/mypy/issues/1167 # NOQA
-    TimeTrackingCursor.executemany = cursor_executemany # type: ignore # https://github.com/JukkaL/mypy/issues/1167
+    def cursor_executemany(self, sql, params=()):  # type: ignore
+        return wrapper_execute(self, super(TimeTrackingCursor, self).executemany, sql, params)  # type: ignore
+    TimeTrackingCursor.executemany = cursor_executemany  # type: ignore
 
     yield queries
 
-    TimeTrackingCursor.execute = old_execute # type: ignore # https://github.com/JukkaL/mypy/issues/1167
-    TimeTrackingCursor.executemany = old_executemany # type: ignore # https://github.com/JukkaL/mypy/issues/1167
+    TimeTrackingCursor.execute = old_execute  # type: ignore
+    TimeTrackingCursor.executemany = old_executemany  # type: ignore
